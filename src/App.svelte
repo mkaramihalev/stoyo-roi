@@ -1,0 +1,114 @@
+<script>
+  let files = []
+  let selecting = false
+  $: video = files.length > 0 ? files[0] : null
+  $: videoUrl =  video ? URL.createObjectURL(video) : ''
+  $: videoName = video ? video.name : 'unknown'
+  let duration = 5
+  let r = 5
+  let currentTime = 0
+  let roi = []
+  let circles = []
+  let regions = {}
+  let regionCount = 0
+  const onClick = ({x, y}) => {
+    if (!selecting) return
+    let cx = x - svgPos.left
+    let cy = y - svgPos.top
+    if (circles.length > 1) {
+      let fx = circles[0].x
+      let fy = circles[0].y
+      if (Math.abs(cx - fx) <= r && Math.abs(cy - fy) <= r){
+        cx = fx
+        cy = fy
+        selecting = false
+      }
+    }
+
+    roi = [...roi, {x: cx, y: cy}]
+    circles = [...circles, {x: cx, y: cy}]
+  }
+  const clear = () => {
+    circles = []
+    roi = []
+  }
+  const save = () => {
+    regions[videoName + '_' + (++regionCount)] = roi.slice()
+    roi = []
+    circles = []
+  }
+  let width = 600
+  let height = 400
+  let svg
+  $: svgPos = svg && {left: svg.getBoundingClientRect().x, top: svg.getBoundingClientRect().y}
+  $: points = roi.map(({x, y}) => `${x},${y}`).join(' ')
+</script>
+
+<main class:pointer={selecting}>
+	<p>Select video: <input type="file" accept="video/*" bind:files></p>
+  <input type="range" min="0" max={duration} step="0.1" bind:value={currentTime} />
+  <button on:click={() => selecting = true}>Select</button>
+  <button on:click={clear}>Clear</button>
+  <button disabled={roi.length < 4} on:click={save}>Save</button>
+  <div class="container" on:click={onClick}>
+    <svg bind:this={svg}>
+      {#each Object.values(regions) as r}
+        <polyline points={r.map(({x, y}) => `${x},${y}`).join(' ')} fill="none" stroke="grey" stroke-width="1"/>
+      {/each}
+      <polyline {points} fill="none" stroke="white" stroke-width="2" stroke-dasharray="10,10"/>
+      {#each circles as {x, y}}
+        <circle cx={x} cy={y} {r} fill="white"/>
+      {/each}
+    </svg>
+    <video src={videoUrl} bind:currentTime bind:duration />
+  </div>
+  <ul>
+  {#each Object.keys(regions) as region}
+    <li>{region}</li>
+  {/each}
+  </ul>
+  {#if Object.keys(regions).length > 0}
+  <a download="regions.json"
+    href={`data:application/json,${JSON.stringify(regions, null, 2)}`}>Download regions</a>
+  {/if}
+</main>
+
+<style>
+	main {
+		text-align: center;
+		padding: 1em;
+		max-width: 240px;
+    margin: 0 auto;
+	}
+
+  .pointer {
+    cursor: pointer;
+  }
+
+  .container {
+    background: grey;
+    width: 90vw;
+    height: 60vh;
+    position: relative;
+  }
+
+  svg {
+    z-index: 2;
+    position: absolute;
+    height: 100%;
+    width: 100%;
+  }
+
+	video {
+    z-index: 1;
+    background: blue;
+    height: 100%;
+    width: 100%;
+  }
+
+	@media (min-width: 640px) {
+		main {
+			max-width: none;
+		}
+	}
+</style>
