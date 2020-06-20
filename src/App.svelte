@@ -1,9 +1,6 @@
 <script>
   let files = []
   let selecting = false
-  $: video = files.length > 0 ? files[0] : null
-  $: videoUrl =  video ? URL.createObjectURL(video) : ''
-  $: videoName = video ? video.name : 'unknown'
   let duration = 5
   let r = 5
   let currentTime = 0
@@ -11,6 +8,11 @@
   let circles = []
   let regions = {}
   let regionCount = 0
+  let width = 600
+  let height = 400
+  let svg
+
+
   const onClick = ({x, y}) => {
     if (!selecting) return
     let cx = x - svgPos.left
@@ -33,15 +35,17 @@
     roi = []
   }
   const save = () => {
-    regions[videoName + '_' + (++regionCount)] = roi.slice()
+    regions[videoName + '_' + currentTime + (++regionCount)] = roi.slice()
     roi = []
     circles = []
   }
-  let width = 600
-  let height = 400
-  let svg
+
+
   $: svgPos = svg && {left: svg.getBoundingClientRect().x, top: svg.getBoundingClientRect().y}
   $: points = roi.map(({x, y}) => `${x},${y}`).join(' ')
+  $: video = files.length > 0 ? files[0] : null
+  $: videoUrl =  video ? URL.createObjectURL(video) : ''
+  $: videoName = video ? video.name : 'unknown'
 </script>
 
 <main class:pointer={selecting}>
@@ -53,7 +57,7 @@
   <div class="container" on:click={onClick}>
     <svg bind:this={svg}>
       {#each Object.values(regions) as r}
-        <polyline points={r.map(({x, y}) => `${x},${y}`).join(' ')} fill="none" stroke="grey" stroke-width="1"/>
+        <polyline points={r.map(({x, y}) => `${x},${y}`).join(' ')} fill="none" stroke="red" stroke-width="2"/>
       {/each}
       <polyline {points} fill="none" stroke="white" stroke-width="2" stroke-dasharray="10,10"/>
       {#each circles as {x, y}}
@@ -79,6 +83,9 @@
 		padding: 1em;
 		max-width: 240px;
     margin: 0 auto;
+    background: lightblue;
+    width: 100%;
+    height: 100%;
 	}
 
   .pointer {
@@ -86,7 +93,6 @@
   }
 
   .container {
-    background: grey;
     width: 90vw;
     height: 60vh;
     position: relative;
@@ -101,7 +107,6 @@
 
 	video {
     z-index: 1;
-    background: blue;
     height: 100%;
     width: 100%;
   }
